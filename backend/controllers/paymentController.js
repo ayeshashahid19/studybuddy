@@ -14,6 +14,10 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Booking ID is required' });
     }
 
+    if (!/^[a-f\d]{24}$/i.test(bookingId)) {
+      return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    }
+
     const booking = await Booking.findById(bookingId);
 
     if (!booking) {

@@ -91,11 +91,10 @@ bookingSchema.index({ tutorId: 1, status: 1 });
 bookingSchema.index({ date: 1, tutorId: 1 });
 
 // Generate booking ID before saving
-bookingSchema.pre('save', async function(next) {
+bookingSchema.pre('save', function() {
   if (!this.bookingId) {
     this.bookingId = 'BK' + Date.now() + Math.floor(Math.random() * 1000);
   }
-  next();
 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
