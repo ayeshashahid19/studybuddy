@@ -7,6 +7,7 @@ import api from '../../services/api'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '../common/LoadingSpinner'
 import PayPalMockCheckout from './PayPalMockCheckout'
+import { calculateBookingTotal, formatMoney, PLATFORM_FEE_PERCENT } from '../../utils/platformFee'
 import "react-datepicker/dist/react-datepicker.css"
 
 const BookingPage = () => {
@@ -89,7 +90,8 @@ const BookingPage = () => {
   })
 
   const hourlyRate = tutor?.hourlyRate || propHourlyRate || 0
-  const totalCost = hourlyRate * duration
+  const sessionAmount = hourlyRate * duration
+  const { platformFee, totalAmount: checkoutTotal } = calculateBookingTotal(sessionAmount)
 
   const handleBooking = () => {
     if (!selectedSlot) {
@@ -107,7 +109,7 @@ const BookingPage = () => {
       date: selectedDate.toISOString().split('T')[0],
       startTime: selectedSlot,
       duration,
-      totalAmount: totalCost,
+      totalAmount: sessionAmount,
       studentName: contactInfo.studentName,
       studentEmail: contactInfo.studentEmail,
       studentPhone: contactInfo.studentPhone
@@ -128,6 +130,8 @@ const BookingPage = () => {
       <PayPalMockCheckout
         bookingId={pendingBooking._id}
         amount={pendingBooking.totalAmount}
+        sessionAmount={pendingBooking.sessionAmount}
+        platformFee={pendingBooking.platformFee}
         onSuccess={handlePaymentSuccess}
         onCancel={() => setStep('details')}
         tutorName={tutor?.userId?.name || tutorName}
@@ -295,9 +299,20 @@ const BookingPage = () => {
               </div>
             </div>
 
+            <div className="space-y-2 border-b pb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span>${formatMoney(sessionAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Platform fee ({PLATFORM_FEE_PERCENT}%)</span>
+                <span>${formatMoney(platformFee)}</span>
+              </div>
+            </div>
+
             <div className="flex justify-between mt-4 text-lg font-bold">
               <span>Total</span>
-              <span className="text-primary-600">${totalCost}</span>
+              <span className="text-primary-600">${formatMoney(checkoutTotal)}</span>
             </div>
 
             <button

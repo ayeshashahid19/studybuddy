@@ -4,6 +4,7 @@ const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const AuditLog = require('../models/AuditLog');
 const { logAudit } = require('../utils/auditLog');
+const { getBookingPlatformFee } = require('../utils/platformFee');
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -220,7 +221,8 @@ const getPlatformStats = async (req, res) => {
     const paidBookings = await Booking.find({
       paymentStatus: { $in: ['completed', 'paid'] }
     });
-    const totalRevenue = paidBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const totalRevenue = paidBookings.reduce((sum, b) => sum + getBookingPlatformFee(b), 0);
+    const grossVolume = paidBookings.reduce((sum, b) => sum + b.totalAmount, 0);
     
     const recentBookings = await Booking.find()
       .populate('studentId', 'name')
@@ -237,7 +239,7 @@ const getPlatformStats = async (req, res) => {
       dayEnd.setHours(23, 59, 59, 999);
       const dayRevenue = paidBookings
         .filter((b) => b.createdAt >= dayStart && b.createdAt <= dayEnd)
-        .reduce((sum, b) => sum + b.totalAmount, 0);
+        .reduce((sum, b) => sum + getBookingPlatformFee(b), 0);
       revenueData.push({
         date: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
         revenue: dayRevenue
@@ -260,6 +262,8 @@ const getPlatformStats = async (req, res) => {
       completedBookings,
       totalRevenue,
       revenue: totalRevenue,
+      grossVolume,
+      platformFeePercent: 10,
       recentBookings,
       revenueData,
       userDistribution

@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const { generateMeetingLink } = require('../utils/meetingLink');
 const { emitToUser } = require('../utils/socket');
 const { logAudit } = require('../utils/auditLog');
+const { getBookingPlatformFee } = require('../utils/platformFee');
 
 const SUCCESS_CARD = '4111111111111111';
 const DECLINE_CARD = '4000000000000002';
@@ -111,7 +112,7 @@ const captureOrder = async (req, res) => {
       action: 'payment',
       userId: req.user.id,
       targetId: booking._id.toString(),
-      details: `Payment of $${booking.totalAmount} captured for booking ${booking.bookingId}`,
+      details: `Payment of $${booking.totalAmount} captured for booking ${booking.bookingId} (platform fee: $${getBookingPlatformFee(booking)})`,
       type: 'success',
       status: 'paid'
     });

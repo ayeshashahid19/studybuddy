@@ -4,6 +4,7 @@ import { CreditCardIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 import CardPreview from '../booking/CardPreview'
+import { calculateBookingTotal, formatMoney, PLATFORM_FEE_PERCENT } from '../../utils/platformFee'
 
 const Spinner = ({ size = 16 }) => (
   <svg
@@ -31,6 +32,8 @@ const getInitials = (name = '') =>
 const PayPalMockCheckout = ({
   bookingId,
   amount,
+  sessionAmount,
+  platformFee,
   onSuccess,
   onCancel,
   tutorName = 'Study Session',
@@ -103,7 +106,22 @@ const PayPalMockCheckout = ({
     syncExpiry(expiryMonth, year)
   }
 
-  const formattedAmount = Number(amount).toFixed(2)
+  const pricing = sessionAmount != null
+    ? {
+        sessionAmount: Number(sessionAmount),
+        platformFee: platformFee != null
+          ? Number(platformFee)
+          : calculateBookingTotal(sessionAmount).platformFee,
+        totalAmount: amount != null
+          ? Number(amount)
+          : calculateBookingTotal(sessionAmount).totalAmount,
+      }
+    : calculateBookingTotal(Number(amount))
+
+  const formattedSubtotal = formatMoney(pricing.sessionAmount)
+  const formattedPlatformFee = formatMoney(pricing.platformFee)
+  const formattedTotal = formatMoney(pricing.totalAmount)
+
   const cardDigits = cardNumber.replace(/\s/g, '')
   const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'))
   const years = Array.from({ length: 12 }, (_, i) => String(new Date().getFullYear() + i))
@@ -259,19 +277,19 @@ const PayPalMockCheckout = ({
 
             <div className="price-row">
               <span>Subtotal</span>
-              <span>${formattedAmount}</span>
+              <span>${formattedSubtotal}</span>
             </div>
             <div className="price-row">
-              <span>Platform fee</span>
-              <span className="price-free">Free</span>
+              <span>Platform fee ({PLATFORM_FEE_PERCENT}%)</span>
+              <span>${formattedPlatformFee}</span>
             </div>
             <div className="price-row">
               <span>Tax</span>
-              <span className="price-free">Free</span>
+              <span className="price-free">$0.00</span>
             </div>
             <div className="price-row price-row--total">
               <span className="price-label">Total</span>
-              <span className="price-value">${formattedAmount}</span>
+              <span className="price-value">${formattedTotal}</span>
             </div>
 
             <button
@@ -287,7 +305,7 @@ const PayPalMockCheckout = ({
               ) : (
                 <>
                   <LockClosedIcon className="h-4 w-4" />
-                  Place Order — ${formattedAmount}
+                  Place Order — ${formattedTotal}
                 </>
               )}
             </button>

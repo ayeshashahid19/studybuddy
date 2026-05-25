@@ -113,7 +113,13 @@ const AdminDashboard = () => {
     { title: 'Total Users', value: stats?.totalUsers || 0, icon: UsersIcon, color: 'bg-blue-500' },
     { title: 'Active Tutors', value: stats?.activeTutors || 0, icon: UserGroupIcon, color: 'bg-green-500' },
     { title: 'Total Students', value: stats?.totalStudents || 0, icon: UsersIcon, color: 'bg-purple-500' },
-    { title: 'Platform Revenue', value: `$${stats?.revenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-yellow-500' },
+    {
+      title: 'Platform Profit',
+      value: `$${Number(stats?.revenue || 0).toFixed(2)}`,
+      subtitle: '10% commission on paid sessions',
+      icon: CurrencyDollarIcon,
+      color: 'bg-yellow-500',
+    },
   ]
 
   return (
@@ -150,6 +156,9 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-gray-500 text-sm">{stat.title}</p>
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                  {stat.subtitle && (
+                    <p className="text-xs text-gray-400 mt-1">{stat.subtitle}</p>
+                  )}
                 </div>
                 <div className={`${stat.color} p-3 rounded-lg`}>
                   <stat.icon className="h-6 w-6 text-white" />
@@ -163,14 +172,15 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Revenue Chart */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4">Revenue Overview</h3>
+            <h3 className="text-lg font-semibold mb-1">Platform Profit Overview</h3>
+            <p className="text-sm text-gray-500 mb-4">10% commission from paid sessions</p>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={stats?.revenueData || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
+                <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Platform profit']} />
+                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} name="Platform profit" />
               </LineChart>
             </ResponsiveContainer>
           </div>

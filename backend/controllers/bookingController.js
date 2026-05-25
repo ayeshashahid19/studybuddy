@@ -3,6 +3,7 @@ const TutorProfile = require('../models/TutorProfile');
 const User = require('../models/User');
 const { logAudit } = require('../utils/auditLog');
 const { emitToUser } = require('../utils/socket');
+const { calculateBookingTotal } = require('../utils/platformFee');
 
 const generateTimeSlots = () => {
   const slots = [];
@@ -73,6 +74,8 @@ const createBooking = async (req, res) => {
     const endHour = parseInt(hour, 10) + parseInt(duration, 10);
     const endTime = `${endHour}:${minute}`;
 
+    const pricing = calculateBookingTotal(Number(totalAmount));
+
     const booking = await Booking.create({
       studentId: req.user.id,
       tutorId,
@@ -81,7 +84,9 @@ const createBooking = async (req, res) => {
       startTime,
       endTime,
       duration,
-      totalAmount,
+      sessionAmount: pricing.sessionAmount,
+      platformFee: pricing.platformFee,
+      totalAmount: pricing.totalAmount,
       studentName: studentName || req.user.name,
       studentEmail: studentEmail || req.user.email,
       studentPhone: studentPhone || '',

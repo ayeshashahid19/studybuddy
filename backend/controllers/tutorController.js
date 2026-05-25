@@ -2,6 +2,7 @@ const TutorProfile = require('../models/TutorProfile');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
+const { getBookingSessionAmount } = require('../utils/platformFee');
 
 // Create or update tutor profile
 const createOrUpdateProfile = async (req, res) => {
@@ -131,7 +132,7 @@ const getTutorStats = async (req, res) => {
     
     // Calculate stats
     const completedBookings = allBookings.filter(b => b.status === 'completed');
-    const totalEarnings = completedBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const totalEarnings = completedBookings.reduce((sum, b) => sum + getBookingSessionAmount(b), 0);
     const totalSessions = allBookings.length;
     const completedSessions = completedBookings.length;
     
