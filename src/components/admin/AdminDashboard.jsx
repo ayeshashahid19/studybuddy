@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   UsersIcon, 
   UserGroupIcon, 
@@ -24,10 +24,12 @@ import {
   Cell
 } from 'recharts'
 import api from '../../services/api'
+import toast from 'react-hot-toast'
 import LoadingSpinner from '../common/LoadingSpinner'
 
 const AdminDashboard = () => {
   const [timeRange, setTimeRange] = useState('week')
+  const queryClient = useQueryClient()
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats', timeRange],
@@ -45,6 +47,64 @@ const AdminDashboard = () => {
     },
   })
 
+  const {
+    data: pendingTutors,
+    isLoading: pendingLoading,
+    isError: pendingError,
+  } = useQuery({
+    queryKey: ['pending-tutors'],
+    queryFn: async () => {
+      const response = await api.get('/admin/pending-tutors')
+      return response.data.tutors || []
+    },
+  })
+
+  const approveMutation = useMutation({
+    mutationFn: async (tutorId) => {
+      const response = await api.post(`/admin/approve-tutor/${tutorId}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Tutor approved successfully!')
+      queryClient.invalidateQueries({ queryKey: ['pending-tutors'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to approve tutor')
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: async (tutorId) => {
+      const response = await api.post(`/admin/reject-tutor/${tutorId}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Tutor rejected')
+      queryClient.invalidateQueries({ queryKey: ['pending-tutors'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to reject tutor')
+    },
+  })
+
+  const handleApprove = (tutorId) => {
+    approveMutation.mutate(tutorId)
+  }
+
+  const handleReject = (tutorId) => {
+    if (window.confirm('Are you sure you want to reject this tutor?')) {
+      rejectMutation.mutate(tutorId)
+    }
+  }
+
+  const isApproving = (tutorId) =>
+    approveMutation.isPending && approveMutation.variables === tutorId
+
+  const isRejecting = (tutorId) =>
+    rejectMutation.isPending && rejectMutation.variables === tutorId
+
   if (statsLoading) return <LoadingSpinner />
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
@@ -54,12 +114,6 @@ const AdminDashboard = () => {
     { title: 'Active Tutors', value: stats?.activeTutors || 0, icon: UserGroupIcon, color: 'bg-green-500' },
     { title: 'Total Students', value: stats?.totalStudents || 0, icon: UsersIcon, color: 'bg-purple-500' },
     { title: 'Platform Revenue', value: `$${stats?.revenue || 0}`, icon: CurrencyDollarIcon, color: 'bg-yellow-500' },
-  ]
-
-  const pendingApprovals = [
-    { id: 1, name: 'John Smith', subject: 'Mathematics', experience: 5, appliedDate: '2024-01-15' },
-    { id: 2, name: 'Sarah Johnson', subject: 'Physics', experience: 8, appliedDate: '2024-01-14' },
-    { id: 3, name: 'Mike Brown', subject: 'Computer Science', experience: 3, appliedDate: '2024-01-13' },
   ]
 
   return (
@@ -153,30 +207,58 @@ const AdminDashboard = () => {
             <p className="text-gray-500 text-sm">Review and approve tutor applications</p>
           </div>
           <div className="divide-y divide-gray-100">
-            {pendingApprovals.map((tutor) => (
-              <div key={tutor.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <UserGroupIcon className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{tutor.name}</p>
-                    <p className="text-sm text-gray-500">{tutor.subject} • {tutor.experience} years exp</p>
-                    <p className="text-xs text-gray-400">Applied: {tutor.appliedDate}</p>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2">
-                    <CheckCircleIcon className="h-4 w-4" />
-                    Approve
-                  </button>
-                  <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2">
-                    <XCircleIcon className="h-4 w-4" />
-                    Reject
-                  </button>
-                </div>
+            {pendingLoading ? (
+              <div className="p-6 flex justify-center">
+                <LoadingSpinner />
               </div>
-            ))}
+            ) : pendingError ? (
+              <div className="p-6 text-center text-red-600 text-sm">
+                Failed to load pending approvals. Please try again.
+              </div>
+            ) : pendingTutors?.length === 0 ? (
+              <div className="p-6 text-center text-gray-500 text-sm">
+                No pending approvals
+              </div>
+            ) : (
+              pendingTutors.map((tutor) => {
+                const tutorUserId = tutor.userId?._id
+                return (
+                  <div key={tutor._id} className="p-6 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-blue-100 p-3 rounded-full">
+                        <UserGroupIcon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{tutor.userId?.name || 'Unknown'}</p>
+                        <p className="text-sm text-gray-500">{tutor.userId?.email}</p>
+                        <p className="text-sm text-gray-500">{tutor.subject} • {tutor.experience || 0} years exp</p>
+                        <p className="text-xs text-gray-400">
+                          Applied: {tutor.createdAt ? new Date(tutor.createdAt).toLocaleDateString() : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleApprove(tutorUserId)}
+                        disabled={isApproving(tutorUserId) || isRejecting(tutorUserId)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <CheckCircleIcon className="h-4 w-4" />
+                        {isApproving(tutorUserId) ? 'Approving…' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(tutorUserId)}
+                        disabled={isApproving(tutorUserId) || isRejecting(tutorUserId)}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <XCircleIcon className="h-4 w-4" />
+                        {isRejecting(tutorUserId) ? 'Rejecting…' : 'Reject'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
 

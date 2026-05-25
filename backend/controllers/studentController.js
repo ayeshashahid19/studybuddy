@@ -3,27 +3,47 @@ const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const TutorProfile = require('../models/TutorProfile');
 
+const getStudentId = (user) => user._id || user.id;
+
+const isUpcomingConfirmed = (booking) => {
+  if (booking.status !== 'confirmed') return false;
+  const sessionDay = new Date(booking.date);
+  sessionDay.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return sessionDay >= today;
+};
+
+const isPaidBooking = (booking) =>
+  (booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid') &&
+  booking.status !== 'cancelled' &&
+  booking.status !== 'refunded';
+
 // Get student dashboard stats
 const getStudentStats = async (req, res) => {
   try {
-    const bookings = await Booking.find({ studentId: req.user.id })
+    const studentId = getStudentId(req.user);
+
+    const bookings = await Booking.find({ studentId })
       .populate('tutorId', 'name email avatar')
       .sort({ date: -1 });
-    
-    const completedBookings = bookings.filter(b => b.status === 'completed');
-    const totalHours = completedBookings.reduce((sum, b) => sum + b.duration, 0);
-    const totalSpent = completedBookings.reduce((sum, b) => sum + b.totalAmount, 0);
-    
-    const upcomingSessions = bookings.filter(b => 
-      b.status === 'confirmed' && new Date(b.date) >= new Date()
+
+    const completedBookings = bookings.filter((b) => b.status === 'completed');
+    const totalHours = completedBookings.reduce((sum, b) => sum + (Number(b.duration) || 0), 0);
+    const totalSpent = bookings
+      .filter(isPaidBooking)
+      .reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+
+    const upcomingSessions = bookings.filter(isUpcomingConfirmed);
+
+    const pastSessions = bookings.filter(
+      (b) =>
+        b.status === 'completed' ||
+        (b.status === 'confirmed' && !isUpcomingConfirmed(b))
     );
-    
-    const pastSessions = bookings.filter(b => 
-      b.status === 'completed' || (b.status === 'confirmed' && new Date(b.date) < new Date())
-    );
-    
-    const reviews = await Review.find({ studentId: req.user.id });
-    
+
+    const reviews = await Review.find({ studentId });
+
     res.json({
       success: true,
       totalSessions: completedBookings.length,
@@ -41,10 +61,12 @@ const getStudentStats = async (req, res) => {
 // Get student bookings
 const getStudentBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ studentId: req.user.id })
+    const studentId = getStudentId(req.user);
+
+    const bookings = await Booking.find({ studentId })
       .populate('tutorId', 'name email avatar')
       .sort({ date: -1 });
-    
+
     res.json({ success: true, bookings });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -63,8 +85,10 @@ const getStudentCredits = async (req, res) => {
 // Get student progress
 const getStudentProgress = async (req, res) => {
   try {
-    const bookings = await Booking.find({ 
-      studentId: req.user.id,
+    const studentId = getStudentId(req.user);
+
+    const bookings = await Booking.find({
+      studentId,
       status: 'completed'
     });
     
@@ -83,7 +107,9 @@ const getStudentProgress = async (req, res) => {
 // Get student's reviews
 const getMyReviews = async (req, res) => {
   try {
-    const reviews = await Review.find({ studentId: req.user.id })
+    const studentId = getStudentId(req.user);
+
+    const reviews = await Review.find({ studentId })
       .populate('tutorId', 'name email avatar')
       .populate('bookingId')
       .sort({ createdAt: -1 });

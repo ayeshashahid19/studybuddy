@@ -5,6 +5,15 @@ import api from '../../services/api'
 import LoadingSpinner from '../common/LoadingSpinner'
 import toast from 'react-hot-toast'
 
+const isUpcomingConfirmed = (booking) => {
+  if (booking.status !== 'confirmed') return false
+  const sessionDay = new Date(booking.date)
+  sessionDay.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return sessionDay >= today
+}
+
 const StudentDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [reviewRating, setReviewRating] = useState(5)
@@ -12,7 +21,7 @@ const StudentDashboard = () => {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['student-stats'],
     queryFn: async () => {
       const response = await api.get('/students/stats')
@@ -20,13 +29,14 @@ const StudentDashboard = () => {
     },
   })
 
-  const { data: bookings, refetch: refetchBookings } = useQuery({
+  const { data: bookings = [], isLoading: bookingsLoading, refetch: refetchBookings } = useQuery({
     queryKey: ['student-bookings'],
     queryFn: async () => {
       const response = await api.get('/bookings/student')
-      return response.data.bookings || [
-        ...(response.data.upcoming || []),
-        ...(response.data.past || [])
+      const data = response.data
+      return data.bookings ?? [
+        ...(data.upcoming || []),
+        ...(data.past || []),
       ]
     },
   })
@@ -66,10 +76,12 @@ const StudentDashboard = () => {
     })
   }
 
-  if (isLoading) return <LoadingSpinner />
+  if (statsLoading || bookingsLoading) return <LoadingSpinner />
 
-  const completedSessions = bookings?.filter(b => b.status === 'completed') || []
-  const upcomingSessions = bookings?.filter(b => b.status === 'confirmed' && new Date(b.date) >= new Date()) || []
+  const completedSessions = bookings.filter((b) => b.status === 'completed')
+  const upcomingSessions = bookings
+    .filter(isUpcomingConfirmed)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

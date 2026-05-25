@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { UserCircleIcon, CurrencyDollarIcon, StarIcon, CalendarIcon, PencilIcon, UsersIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { UserCircleIcon, CurrencyDollarIcon, StarIcon, CalendarIcon, PencilIcon, UsersIcon, BookOpenIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import api from '../../services/api'
+import toast from 'react-hot-toast'
 import LoadingSpinner from '../common/LoadingSpinner'
 
 const TutorDashboard = () => {
+  const queryClient = useQueryClient()
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['tutor-stats'],
     queryFn: async () => {
@@ -12,6 +15,27 @@ const TutorDashboard = () => {
       return response.data
     },
   })
+
+  const completeMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      const response = await api.put(`/bookings/${bookingId}/complete`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Session marked as complete!')
+      queryClient.invalidateQueries({ queryKey: ['tutor-stats'] })
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to complete session')
+    },
+  })
+
+  const handleMarkComplete = (bookingId) => {
+    completeMutation.mutate(bookingId)
+  }
+
+  const isCompleting = (bookingId) =>
+    completeMutation.isPending && completeMutation.variables === bookingId
 
   if (isLoading) return <LoadingSpinner />
 
@@ -149,8 +173,8 @@ const TutorDashboard = () => {
             Upcoming Sessions
           </h2>
           <div className="space-y-3">
-            {stats.upcomingSessions.map((session, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            {stats.upcomingSessions.map((session) => (
+              <div key={session._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium">{session.studentId?.name}</p>
                   <p className="text-sm text-gray-500">{session.studentId?.email}</p>
@@ -161,9 +185,21 @@ const TutorDashboard = () => {
                     </a>
                   )}
                 </div>
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                  {session.startTime} - {session.endTime}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                    {session.startTime} - {session.endTime}
+                  </span>
+                  {session.status === 'confirmed' && (
+                    <button
+                      onClick={() => handleMarkComplete(session._id)}
+                      disabled={isCompleting(session._id)}
+                      className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <CheckCircleIcon className="h-4 w-4" />
+                      {isCompleting(session._id) ? 'Completing…' : 'Mark Complete'}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -186,6 +222,7 @@ const TutorDashboard = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -203,6 +240,18 @@ const TutorDashboard = () => {
                       }`}>
                         {session.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {session.status === 'confirmed' && (
+                        <button
+                          onClick={() => handleMarkComplete(session._id)}
+                          disabled={isCompleting(session._id)}
+                          className="px-3 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CheckCircleIcon className="h-3.5 w-3.5" />
+                          {isCompleting(session._id) ? 'Completing…' : 'Mark Complete'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -125,21 +125,15 @@ const BookingPage = () => {
 
   if (step === 'payment' && pendingBooking) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Complete Payment</h1>
-          <p className="text-gray-600 mt-1">
-            Session with {tutor?.userId?.name || tutorName} on{' '}
-            {new Date(pendingBooking.date).toLocaleDateString()} at {pendingBooking.startTime}
-          </p>
-        </div>
-        <PayPalMockCheckout
-          bookingId={pendingBooking._id}
-          amount={pendingBooking.totalAmount}
-          onSuccess={handlePaymentSuccess}
-          onCancel={() => setStep('details')}
-        />
-      </div>
+      <PayPalMockCheckout
+        bookingId={pendingBooking._id}
+        amount={pendingBooking.totalAmount}
+        onSuccess={handlePaymentSuccess}
+        onCancel={() => setStep('details')}
+        tutorName={tutor?.userId?.name || tutorName}
+        subject={tutor?.subject}
+        sessionDate={pendingBooking.date}
+      />
     )
   }
 

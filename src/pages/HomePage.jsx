@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { MagnifyingGlassIcon, CalendarIcon, ChatBubbleLeftRightIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, CalendarIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 
 const HomePage = () => {
   const { isAuthenticated } = useAuth()
@@ -36,7 +36,7 @@ const HomePage = () => {
           <p className="text-gray-600 mt-2">Everything you need for successful learning</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="text-center p-6">
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <MagnifyingGlassIcon className="h-8 w-8 text-primary-600" />
@@ -51,14 +51,6 @@ const HomePage = () => {
             </div>
             <h3 className="text-xl font-semibold mb-2">Easy Booking</h3>
             <p className="text-gray-600">Book sessions in real-time with instant confirmation</p>
-          </div>
-          
-          <div className="text-center p-6">
-            <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ChatBubbleLeftRightIcon className="h-8 w-8 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Live Chat</h3>
-            <p className="text-gray-600">Communicate directly with your tutor through our chat system</p>
           </div>
           
           <div className="text-center p-6">
