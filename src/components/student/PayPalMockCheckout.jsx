@@ -5,13 +5,6 @@ import api from '../../services/api'
 import toast from 'react-hot-toast'
 import CardPreview from '../booking/CardPreview'
 
-const LockIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="5" y="11" width="14" height="10" rx="2" />
-    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-  </svg>
-)
-
 const Spinner = ({ size = 16 }) => (
   <svg
     className="animate-spin"
@@ -244,11 +237,6 @@ const PayPalMockCheckout = ({
                 </div>
               </div>
             </div>
-
-            <div className="security-badge">
-              <LockIcon size={14} />
-              <span>256-bit SSL encryption. Your payment info is never stored.</span>
-            </div>
           </div>
 
           {/* Right — Order summary */}
@@ -315,17 +303,6 @@ const PayPalMockCheckout = ({
               </button>
             )}
           </div>
-        </div>
-
-        <div className="test-hint">
-          <span className="test-hint__label">Test mode</span>
-          <span>
-            Success: <code>4111 1111 1111 1111</code>
-          </span>
-          <span className="divider">·</span>
-          <span>
-            Decline: <code>4000 0000 0000 0002</code>
-          </span>
         </div>
       </form>
     </div>
