@@ -7,17 +7,15 @@ import LoadingSpinner from '../common/LoadingSpinner'
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
+  const [selectedRole, setSelectedRole] = useState('')
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({})
   const queryClient = useQueryClient()
 
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['admin-users', searchTerm, roleFilter],
+    queryKey: ['admin-users'],
     queryFn: async () => {
-      const response = await api.get('/admin/users', {
-        params: { search: searchTerm, role: roleFilter }
-      })
+      const response = await api.get('/admin/users')
       return response.data.users
     },
   })
@@ -73,10 +71,15 @@ const UserManagement = () => {
     }
   }
 
-  const filteredUsers = users?.filter(user => 
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users?.filter(user => {
+    const matchesRole = selectedRole === '' ||
+                        selectedRole === 'all' ||
+                        user.role === selectedRole
+    const matchesSearch = !searchTerm ||
+                          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesRole && matchesSearch
+  })
 
   if (isLoading) return <LoadingSpinner />
 
@@ -100,14 +103,14 @@ const UserManagement = () => {
           />
         </div>
         <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          value={selectedRole}
+          onChange={(e) => setSelectedRole(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg"
         >
-          <option value="all">All Roles</option>
-          <option value="student">Students</option>
-          <option value="tutor">Tutors</option>
-          <option value="admin">Admins</option>
+          <option value="">All Roles</option>
+          <option value="student">Student</option>
+          <option value="tutor">Tutor</option>
+          <option value="admin">Admin</option>
         </select>
       </div>
 
