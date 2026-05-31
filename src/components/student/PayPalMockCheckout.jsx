@@ -20,6 +20,8 @@ const Spinner = ({ size = 16 }) => (
   </svg>
 )
 
+const DECLINE_CARD = '4000000000000002'
+
 const getInitials = (name = '') =>
   name
     .split(' ')
@@ -45,6 +47,7 @@ const PayPalMockCheckout = ({
   const [cvv, setCvv] = useState('')
   const [cardName, setCardName] = useState('')
   const [declineError, setDeclineError] = useState(false)
+  const [formatError, setFormatError] = useState(false)
   const [expiryMonth, setExpiryMonth] = useState('')
   const [expiryYear, setExpiryYear] = useState('')
 
@@ -79,7 +82,23 @@ const PayPalMockCheckout = ({
       return
     }
 
+    const stripped = cardNumber.replace(/\s/g, '')
+    const isValidFormat = /^\d{16}$/.test(stripped)
+
+    if (!isValidFormat) {
+      setFormatError(true)
+      setDeclineError(false)
+      return
+    }
+
+    if (stripped === DECLINE_CARD) {
+      setDeclineError(true)
+      setFormatError(false)
+      return
+    }
+
     setDeclineError(false)
+    setFormatError(false)
     paymentMutation.mutate()
   }
 
@@ -184,12 +203,21 @@ const PayPalMockCheckout = ({
                 id="cardNumber"
                 type="text"
                 value={cardNumber}
-                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                className={inputClass(cardDigits.length === 16, declineError)}
+                onChange={(e) => {
+                  setCardNumber(formatCardNumber(e.target.value))
+                  setFormatError(false)
+                  setDeclineError(false)
+                }}
+                className={inputClass(cardDigits.length === 16, declineError || formatError)}
                 placeholder="0000 0000 0000 0000"
                 maxLength={19}
                 autoComplete="cc-number"
               />
+              {formatError && (
+                <p className="field-error-msg">
+                  Please enter a valid 16-digit card number
+                </p>
+              )}
               {declineError && (
                 <p className="field-error-msg">
                   Your card was declined. Please try a different card.
@@ -322,6 +350,11 @@ const PayPalMockCheckout = ({
             )}
           </div>
         </div>
+
+        <p className="test-hint">
+          Any valid 16-digit card number will succeed ·{' '}
+          <code>4000 0000 0000 0002</code> to test decline
+        </p>
       </form>
     </div>
   )

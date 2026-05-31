@@ -147,11 +147,7 @@ const StudentDashboard = () => {
                   <p className="font-medium">{session.tutorId?.name}</p>
                   <p className="text-sm text-gray-500">{new Date(session.date).toLocaleDateString()} at {session.startTime}</p>
                   <p className="text-sm text-gray-500">Duration: {session.duration} hour(s)</p>
-                  {session.meetingLink && (
-                    <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 hover:underline">
-                      Join Meeting Link
-                    </a>
-                  )}
+                  <p className="text-sm text-gray-500">📧 Teacher will contact you through email</p>
                 </div>
                 <div className="text-right">
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Confirmed</span>

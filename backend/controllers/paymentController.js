@@ -4,7 +4,6 @@ const { emitToUser } = require('../utils/socket');
 const { logAudit } = require('../utils/auditLog');
 const { getBookingPlatformFee } = require('../utils/platformFee');
 
-const SUCCESS_CARD = '4111111111111111';
 const DECLINE_CARD = '4000000000000002';
 
 const createOrder = async (req, res) => {
@@ -65,6 +64,13 @@ const captureOrder = async (req, res) => {
 
     const sanitizedCard = cardNumber.replace(/\s/g, '');
 
+    if (!/^\d{16}$/.test(sanitizedCard)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 16-digit card number'
+      });
+    }
+
     if (sanitizedCard === DECLINE_CARD) {
       await logAudit({
         action: 'payment',
@@ -75,13 +81,6 @@ const captureOrder = async (req, res) => {
         status: 'declined'
       });
       return res.status(400).json({ success: false, message: 'Payment declined. Please try another card.' });
-    }
-
-    if (sanitizedCard !== SUCCESS_CARD) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid test card. Use 4111111111111111 for success or 4000000000000002 to simulate decline.'
-      });
     }
 
     const booking = await Booking.findOne({ paymentOrderId: orderId });

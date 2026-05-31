@@ -222,7 +222,6 @@ const TutorDashboard = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -240,18 +239,6 @@ const TutorDashboard = () => {
                       }`}>
                         {session.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {session.status === 'confirmed' && (
-                        <button
-                          onClick={() => handleMarkComplete(session._id)}
-                          disabled={isCompleting(session._id)}
-                          className="px-3 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <CheckCircleIcon className="h-3.5 w-3.5" />
-                          {isCompleting(session._id) ? 'Completing…' : 'Mark Complete'}
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
