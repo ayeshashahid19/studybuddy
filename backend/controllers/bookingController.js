@@ -16,6 +16,18 @@ const generateTimeSlots = () => {
   return slots;
 };
 
+const normalizeStartTime = (time) => {
+  if (!time) return '';
+  const [hour, minute = '00'] = time.split(':');
+  return `${parseInt(hour, 10)}:${minute.padStart(2, '0')}`;
+};
+
+const getDateRange = (dateStr) => {
+  const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
+  const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
+  return { dayStart, dayEnd };
+};
+
 const getAvailableSlots = async (req, res) => {
   try {
     const { tutorId, date } = req.query;
@@ -25,17 +37,26 @@ const getAvailableSlots = async (req, res) => {
     }
 
     const allSlots = generateTimeSlots();
+    const { dayStart, dayEnd } = getDateRange(date);
 
-    const bookings = await Booking.find({
+    const existingBookings = await Booking.find({
       tutorId,
-      date: new Date(date),
+      date: { $gte: dayStart, $lte: dayEnd },
       status: { $in: ['pending', 'confirmed'] }
     });
 
-    const bookedSlots = bookings.map((b) => b.startTime);
-    const availableSlots = allSlots.filter((slot) => !bookedSlots.includes(slot));
+    const bookedSlotKeys = new Set(
+      existingBookings.map((b) => normalizeStartTime(b.startTime))
+    );
 
-    res.json({ success: true, slots: availableSlots });
+    const bookedSlots = allSlots.filter((slot) =>
+      bookedSlotKeys.has(normalizeStartTime(slot))
+    );
+    const availableSlots = allSlots.filter((slot) =>
+      !bookedSlotKeys.has(normalizeStartTime(slot))
+    );
+
+    res.json({ success: true, slots: availableSlots, bookedSlots, allSlots });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

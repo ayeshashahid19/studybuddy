@@ -10,6 +10,13 @@ import PayPalMockCheckout from './PayPalMockCheckout'
 import { calculateBookingTotal, formatMoney, PLATFORM_FEE_PERCENT } from '../../utils/platformFee'
 import "react-datepicker/dist/react-datepicker.css"
 
+const formatLocalDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const BookingPage = () => {
   const { tutorId } = useParams()
   const navigate = useNavigate()
@@ -21,7 +28,8 @@ const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [duration, setDuration] = useState(1)
-  const [availableSlots, setAvailableSlots] = useState([])
+  const [allSlots, setAllSlots] = useState([])
+  const [bookedSlots, setBookedSlots] = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [contactInfo, setContactInfo] = useState({
     studentName: '',
@@ -42,9 +50,10 @@ const BookingPage = () => {
       if (!tutorId) return
       setLoadingSlots(true)
       try {
-        const formattedDate = selectedDate.toISOString().split('T')[0]
+        const formattedDate = formatLocalDate(selectedDate)
         const response = await api.get(`/bookings/available-slots?tutorId=${tutorId}&date=${formattedDate}`)
-        setAvailableSlots(response.data.slots || [])
+        setAllSlots(response.data.allSlots || response.data.slots || [])
+        setBookedSlots(response.data.bookedSlots || [])
         setSelectedSlot(null)
       } catch (error) {
         console.error('Error fetching slots:', error)
@@ -106,7 +115,7 @@ const BookingPage = () => {
 
     bookingMutation.mutate({
       tutorId,
-      date: selectedDate.toISOString().split('T')[0],
+      date: formatLocalDate(selectedDate),
       startTime: selectedSlot,
       duration,
       totalAmount: sessionAmount,
@@ -230,26 +239,47 @@ const BookingPage = () => {
             </h3>
             {loadingSlots ? (
               <LoadingSpinner />
-            ) : availableSlots.length === 0 ? (
+            ) : allSlots.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">No available slots for this date</p>
                 <p className="text-sm text-gray-400 mt-1">Please select another date</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`p-2 text-center rounded-lg border transition-all ${
-                      selectedSlot === slot
-                        ? 'bg-primary-500 text-white border-primary-500'
-                        : 'border-gray-300 hover:border-primary-500 hover:bg-blue-50'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
+                {allSlots.map((slot) => {
+                  const isBooked = bookedSlots.includes(slot)
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      disabled={isBooked}
+                      onClick={() => !isBooked && setSelectedSlot(slot)}
+                      className={`relative p-2 text-center rounded-lg border transition-all ${
+                        isBooked
+                          ? 'border-gray-200'
+                          : selectedSlot === slot
+                            ? 'bg-primary-500 text-white border-primary-500'
+                            : 'border-gray-300 hover:border-primary-500 hover:bg-blue-50'
+                      }`}
+                      style={isBooked ? {
+                        background: '#f3f4f6',
+                        color: '#9ca3af',
+                        cursor: 'not-allowed',
+                        pointerEvents: 'none',
+                      } : undefined}
+                    >
+                      {slot}
+                      {isBooked && (
+                        <span
+                          className="block text-[10px] font-medium mt-0.5"
+                          style={{ color: '#9ca3af' }}
+                        >
+                          Booked
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
