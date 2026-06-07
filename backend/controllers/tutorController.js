@@ -88,16 +88,7 @@ const getAllTutors = async (req, res) => {
     const { subject, minPrice, maxPrice, minRating, search } = req.query;
     
     let query = { isApproved: true };
-    
-    if (subject && subject !== '') {
-      query.subject = { $regex: subject, $options: 'i' };
-    }
-    if (minPrice) {
-      query.hourlyRate = { $gte: parseInt(minPrice) };
-    }
-    if (maxPrice) {
-      query.hourlyRate = { ...query.hourlyRate, $lte: parseInt(maxPrice) };
-    }
+
     if (minRating) {
       query.rating = { $gte: parseFloat(minRating) };
     }
@@ -106,6 +97,30 @@ const getAllTutors = async (req, res) => {
       .populate('userId', 'name email avatar phoneNumber');
     
     tutors = tutors.filter(tutor => tutor.userId !== null);
+
+    if (subject && subject !== '') {
+      const subjectLower = subject.toLowerCase();
+      tutors = tutors.filter(tutor =>
+        tutor.subject?.toLowerCase().includes(subjectLower) ||
+        tutor.subjectsOffered?.some(s =>
+          s.toLowerCase().includes(subjectLower)
+        )
+      );
+    }
+
+    if (minPrice) {
+      const min = Number(minPrice);
+      if (!isNaN(min)) {
+        tutors = tutors.filter(tutor => tutor.hourlyRate >= min);
+      }
+    }
+
+    if (maxPrice) {
+      const max = Number(maxPrice);
+      if (!isNaN(max)) {
+        tutors = tutors.filter(tutor => tutor.hourlyRate <= max);
+      }
+    }
     
     if (search && search !== '') {
       tutors = tutors.filter(tutor => 
