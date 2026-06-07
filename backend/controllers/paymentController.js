@@ -3,6 +3,7 @@ const { generateMeetingLink } = require('../utils/meetingLink');
 const { emitToUser } = require('../utils/socket');
 const { logAudit } = require('../utils/auditLog');
 const { getBookingPlatformFee } = require('../utils/platformFee');
+const { sendTutorBookingNotification } = require('../utils/emailService');
 
 const DECLINE_CARD = '4000000000000002';
 
@@ -102,6 +103,34 @@ const captureOrder = async (req, res) => {
     booking.paymentTransactionId = `MOCK-TXN-${Date.now()}`;
     booking.meetingLink = generateMeetingLink(booking);
     await booking.save();
+
+    const fullBooking = await Booking.findById(booking._id)
+      .populate('studentId', 'name email phoneNumber')
+      .populate('tutorId', 'name email');
+
+    if (fullBooking && fullBooking.tutorId) {
+      const tutorEmail = fullBooking.tutorId.email;
+      const tutorName = fullBooking.tutorId.name;
+      const student = fullBooking.studentId;
+
+      await sendTutorBookingNotification({
+        tutorEmail,
+        tutorName,
+        studentName: fullBooking.studentName || student?.name,
+        studentEmail: fullBooking.studentEmail || student?.email,
+        studentPhone: fullBooking.studentPhone || student?.phoneNumber || 'Not provided',
+        sessionDate: new Date(fullBooking.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        startTime: fullBooking.startTime,
+        endTime: fullBooking.endTime,
+        duration: fullBooking.duration,
+        totalAmount: fullBooking.totalAmount
+      });
+    }
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate('studentId', 'name email')
