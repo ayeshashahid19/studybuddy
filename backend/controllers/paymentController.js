@@ -3,7 +3,6 @@ const { generateMeetingLink } = require('../utils/meetingLink');
 const { emitToUser } = require('../utils/socket');
 const { logAudit } = require('../utils/auditLog');
 const { getBookingPlatformFee } = require('../utils/platformFee');
-const { sendTutorBookingNotification } = require('../utils/emailService');
 
 const DECLINE_CARD = '4000000000000002';
 
@@ -107,31 +106,6 @@ const captureOrder = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate('studentId', 'name email phoneNumber')
       .populate('tutorId', 'name email');
-
-    try {
-      if (populatedBooking && populatedBooking.tutorId) {
-        await sendTutorBookingNotification({
-          tutorEmail: populatedBooking.tutorId.email,
-          tutorName: populatedBooking.tutorId.name,
-          studentName: populatedBooking.studentName || populatedBooking.studentId?.name,
-          studentEmail: populatedBooking.studentEmail || populatedBooking.studentId?.email,
-          studentPhone: populatedBooking.studentPhone || populatedBooking.studentId?.phoneNumber || 'Not provided',
-          sessionDate: new Date(populatedBooking.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }),
-          startTime: populatedBooking.startTime,
-          endTime: populatedBooking.endTime,
-          duration: populatedBooking.duration,
-          totalAmount: populatedBooking.totalAmount
-        });
-        console.log('Tutor notification email sent successfully');
-      }
-    } catch (emailError) {
-      console.error('Email notification failed:', emailError);
-    }
 
     await logAudit({
       action: 'payment',
