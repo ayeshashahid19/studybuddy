@@ -104,37 +104,34 @@ const captureOrder = async (req, res) => {
     booking.meetingLink = generateMeetingLink(booking);
     await booking.save();
 
-    const fullBooking = await Booking.findById(booking._id)
+    const populatedBooking = await Booking.findById(booking._id)
       .populate('studentId', 'name email phoneNumber')
       .populate('tutorId', 'name email');
 
-    if (fullBooking && fullBooking.tutorId) {
-      const tutorEmail = fullBooking.tutorId.email;
-      const tutorName = fullBooking.tutorId.name;
-      const student = fullBooking.studentId;
-
-      await sendTutorBookingNotification({
-        tutorEmail,
-        tutorName,
-        studentName: fullBooking.studentName || student?.name,
-        studentEmail: fullBooking.studentEmail || student?.email,
-        studentPhone: fullBooking.studentPhone || student?.phoneNumber || 'Not provided',
-        sessionDate: new Date(fullBooking.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
-        startTime: fullBooking.startTime,
-        endTime: fullBooking.endTime,
-        duration: fullBooking.duration,
-        totalAmount: fullBooking.totalAmount
-      });
+    try {
+      if (populatedBooking && populatedBooking.tutorId) {
+        await sendTutorBookingNotification({
+          tutorEmail: populatedBooking.tutorId.email,
+          tutorName: populatedBooking.tutorId.name,
+          studentName: populatedBooking.studentName || populatedBooking.studentId?.name,
+          studentEmail: populatedBooking.studentEmail || populatedBooking.studentId?.email,
+          studentPhone: populatedBooking.studentPhone || populatedBooking.studentId?.phoneNumber || 'Not provided',
+          sessionDate: new Date(populatedBooking.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          startTime: populatedBooking.startTime,
+          endTime: populatedBooking.endTime,
+          duration: populatedBooking.duration,
+          totalAmount: populatedBooking.totalAmount
+        });
+        console.log('Tutor notification email sent successfully');
+      }
+    } catch (emailError) {
+      console.error('Email notification failed:', emailError);
     }
-
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate('studentId', 'name email')
-      .populate('tutorId', 'name email');
 
     await logAudit({
       action: 'payment',
